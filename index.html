@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Gears | Wear the Legacy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="nav-container">
+            <a href="#" class="logo">GAME <span>GEARS</span></a>
+            <nav class="desktop-nav">
+                <a href="#">Home</a>
+                <a href="#shop">The Kit Room</a>
+                <a href="#" onclick="alert('The Club is currently exclusive. Access coming soon.'); return false;">The Club</a>
+            </nav>
+            <button id="cart-btn" class="cart-btn">
+                <i data-lucide="shopping-bag"></i>
+                <span id="cart-badge" class="badge hidden">0</span>
+            </button>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-bg-text">GAME<br>GEARS</div>
+        <div class="hero-content">
+            <a href="admin.html" class="subtitle" style="display: inline-block;">By Demola</a>
+            <h1>Wear the<br>Legacy.</h1>
+            <p class="description">Exclusive, premium football kits curated for the ultimate collector. Limited drops. Zero compromises.</p>
+            <a href="#shop" class="cta-btn">Enter The Kit Room <i data-lucide="arrow-right"></i></a>
+        </div>
+    </section>
+
+    <section id="shop" class="shop-section">
+        <div class="shop-header">
+            <div>
+                <h2>Latest Arrivals</h2>
+                <p class="subtitle" style="margin-bottom: 0;">Fresh out the box</p>
+            </div>
+            <input type="text" id="search-bar" class="search-input" placeholder="Search kits (e.g., Chelsea, Away)...">
+        </div>
+        
+        <div id="product-grid" class="grid"></div>
+    </section>
+
+    <footer>
+        <p>© 2026 Game Gears. Engineered by Demola.</p>
+    </footer>
+
+    <div id="cart-overlay" class="cart-overlay"></div>
+    <div id="cart-sidebar" class="cart-sidebar">
+        <div class="cart-header">
+            <h2>Your Kit Room</h2>
+            <button id="close-cart"><i data-lucide="x"></i></button>
+        </div>
+        <div id="cart-items" class="cart-items">
+            </div>
+        <div id="cart-footer" class="cart-footer hidden">
+            <div class="total-row">
+                <span>TOTAL</span>
+                <span id="cart-total">₦0</span>
+            </div>
+            <button id="whatsapp-checkout" class="checkout-btn">Order via WhatsApp</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>
