@@ -1,6 +1,7 @@
 // --- SUPABASE CLOUD CONNECTION ---
 const supabaseUrl = 'https://kujpcsvwxarfwbcysvqy.supabase.co';
-const supabaseKey = ['sb_secret_', 'IX9syHyuR2I', 'UvUB02nfwwQ_YcNiZf2r'].join('');
+
+const supabaseKey = 'sb_publishable_4vedTjIP-xPf8Q4tcxEQEw_thjA8vcQ';
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // --- DOM ELEMENTS ---
@@ -13,47 +14,75 @@ const inventoryList = document.getElementById('admin-inventory-list');
 
 // --- 1. AUTHENTICATION STATE ---
 async function checkSession() {
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (error) {
+        console.error("Session error:", error.message);
+    }
+
     if (session) {
-        loginView.classList.add('hidden');
-        dashboardView.classList.remove('hidden');
-        loadAdminInventory(); 
+        if (loginView) {
+            loginView.classList.add('hidden');
+            loginView.style.display = 'none';
+        }
+        if (dashboardView) {
+            dashboardView.classList.remove('hidden');
+            dashboardView.style.display = 'block';
+        }
+        loadAdminInventory();
     } else {
-        loginView.classList.remove('hidden');
-        dashboardView.classList.add('hidden');
+        if (loginView) {
+            loginView.classList.remove('hidden');
+            loginView.style.display = 'flex';
+        }
+        if (dashboardView) {
+            dashboardView.classList.add('hidden');
+            dashboardView.style.display = 'none';
+        }
     }
 }
 
 // --- 2. LOGIN & LOGOUT ---
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('admin-email').value;
-    const password = document.getElementById('admin-password').value;
-    const loginBtn = loginForm.querySelector('.submit-btn');
-    const errorMsg = document.getElementById('login-error');
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('admin-email').value.trim();
+        const password = document.getElementById('admin-password').value;
+        const loginBtn = loginForm.querySelector('.submit-btn');
+        const errorMsg = document.getElementById('login-error');
 
-    loginBtn.textContent = "Verifying...";
-    errorMsg.style.display = 'none';
+        loginBtn.textContent = "Verifying...";
+        loginBtn.disabled = true;
+        if (errorMsg) errorMsg.style.display = 'none';
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-        errorMsg.textContent = "Access Denied: " + error.message;
-        errorMsg.style.display = 'block';
-    } else {
+        if (error) {
+            if (errorMsg) {
+                errorMsg.textContent = "Access Denied: " + error.message;
+                errorMsg.style.display = 'block';
+            } else {
+                alert("Access Denied: " + error.message);
+            }
+        } else if (data?.session) {
+            await checkSession();
+        }
+
+        loginBtn.textContent = "Authorize Access";
+        loginBtn.disabled = false;
+    });
+}
+
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        await supabase.auth.signOut();
         checkSession();
-    }
-    loginBtn.textContent = "Authorize Access";
-});
-
-logoutBtn.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    checkSession(); 
-});
+    });
+}
 
 // --- 3. FETCH LIVE INVENTORY ---
 async function loadAdminInventory() {
+    if (!inventoryList) return;
     inventoryList.innerHTML = '<p style="text-align: center; color: #9CA3AF; padding: 20px;">Fetching drops...</p>';
 
     const { data, error } = await supabase
@@ -66,18 +95,17 @@ async function loadAdminInventory() {
         return;
     }
 
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
         inventoryList.innerHTML = '<p style="text-align: center; color: #9CA3AF; padding: 20px;">No kits in the catalog yet.</p>';
         return;
     }
 
-    // Includes image thumbnails
     inventoryList.innerHTML = data.map(kit => `
         <div class="inventory-item" id="row-${kit.id}">
             <img src="${kit.image_url || 'https://via.placeholder.com/50'}" class="inv-img" alt="Kit Image">
             <div class="inv-details">
                 <h4>${kit.name}</h4>
-                <p>₦${kit.price.toLocaleString()}</p>
+                <p>₦${Number(kit.price).toLocaleString()}</p>
             </div>
             <button onclick="deleteKit('${kit.id}')" class="delete-btn">Remove</button>
         </div>
@@ -85,55 +113,59 @@ async function loadAdminInventory() {
 }
 
 // --- 4. SECURE PUSH WITH IMAGE STORAGE ---
-addKitForm.addEventListener('submit', async function(e) {
-    e.preventDefault(); 
-    const nameInput = document.getElementById('kit-name').value;
-    const priceInput = document.getElementById('kit-price').value;
-    const imageFile = document.getElementById('kit-image').files[0];
-    const submitBtn = this.querySelector('.submit-btn');
+if (addKitForm) {
+    addKitForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const nameInput = document.getElementById('kit-name').value;
+        const priceInput = document.getElementById('kit-price').value;
+        const imageFile = document.getElementById('kit-image').files[0];
+        const submitBtn = this.querySelector('.submit-btn');
 
-    submitBtn.textContent = "Uploading Image...";
-    submitBtn.disabled = true;
+        if (!imageFile) {
+            alert("Please select an image file first.");
+            return;
+        }
 
-    try {
-        const fileExt = imageFile.name.split('.').pop();
-        const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        submitBtn.textContent = "Uploading Image...";
+        submitBtn.disabled = true;
 
-        // Upload to Storage
-        const { error: uploadError } = await supabase.storage
-            .from('kit-images')
-            .upload(uniqueFileName, imageFile);
+        try {
+            const fileExt = imageFile.name.split('.').pop();
+            const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-        if (uploadError) throw new Error("Image Upload Failed: " + uploadError.message);
+            const { error: uploadError } = await supabase.storage
+                .from('kit-images')
+                .upload(uniqueFileName, imageFile);
 
-        submitBtn.textContent = "Saving to Database...";
+            if (uploadError) throw new Error("Image Upload Failed: " + uploadError.message);
 
-        // Get Public URL
-        const { data: { publicUrl } } = supabase.storage
-            .from('kit-images')
-            .getPublicUrl(uniqueFileName);
+            submitBtn.textContent = "Saving to Database...";
 
-        // Save to Database
-        const { error: dbError } = await supabase
-            .from('kits')
-            .insert([{ name: nameInput, price: parseInt(priceInput), image_url: publicUrl }]);
+            const { data: { publicUrl } } = supabase.storage
+                .from('kit-images')
+                .getPublicUrl(uniqueFileName);
 
-        if (dbError) throw new Error("Database Save Failed: " + dbError.message);
+            const { error: dbError } = await supabase
+                .from('kits')
+                .insert([{ name: nameInput, price: parseInt(priceInput, 10), image_url: publicUrl }]);
 
-        const successMsg = document.getElementById('success-message');
-        successMsg.classList.remove('hidden');
-        this.reset(); 
-        loadAdminInventory(); 
-        
-        setTimeout(() => successMsg.classList.add('hidden'), 3000);
+            if (dbError) throw new Error("Database Save Failed: " + dbError.message);
 
-    } catch (err) {
-        alert(err.message);
-    } finally {
-        submitBtn.textContent = "Deploy to Store";
-        submitBtn.disabled = false;
-    }
-});
+            const successMsg = document.getElementById('success-message');
+            if (successMsg) {
+                successMsg.classList.remove('hidden');
+                setTimeout(() => successMsg.classList.add('hidden'), 3000);
+            }
+            this.reset();
+            loadAdminInventory();
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            submitBtn.textContent = "Deploy to Store";
+            submitBtn.disabled = false;
+        }
+    });
+}
 
 // --- 5. SECURE DATABASE DELETE ---
 window.deleteKit = async (id) => {
@@ -144,8 +176,6 @@ window.deleteKit = async (id) => {
     btn.textContent = "Removing...";
     btn.disabled = true;
 
-    // Note: To keep things simple and fast, this deletes the database row, 
-    // but leaves the image in the storage bucket. 
     const { error } = await supabase
         .from('kits')
         .delete()
@@ -156,7 +186,7 @@ window.deleteKit = async (id) => {
         btn.textContent = "Remove";
         btn.disabled = false;
     } else {
-        loadAdminInventory(); 
+        loadAdminInventory();
     }
 };
 
